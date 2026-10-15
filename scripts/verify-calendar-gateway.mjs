@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict';
-import {createGateway,eventOnDay,retryDelay} from '../anime-dashboard/calendar-gateway.js';
+import {createGateway,eventOnDay,retryDelay} from '../anime-dashboard/calendar-gateway.ts';
+import { parseHousehold } from '../anime-dashboard/models.ts';
+import { seed } from '../anime-dashboard/data.ts';
+const household=seed();
+assert.deepEqual(parseHousehold(JSON.parse(JSON.stringify(household))),household);
+assert.throws(()=>parseHousehold({...household,shopping:[{...household.shopping[0],qty:'invalid'}]}));
 const calls=[];
-const api=createGateway('http://mac.local:8787',async(url,options)=>{calls.push({url:new URL(url),options});return new Response(JSON.stringify(calls.length===1?{events:[{id:'occurrence-1'}],hasMore:true}:{events:[{id:'occurrence-2'}],hasMore:false}));});
+const fixture=id=>({id,title:'Fixture',start:'2026-10-15T10:00:00-05:00',end:'2026-10-15T11:00:00-05:00',isAllDay:false,location:null});
+const api=createGateway('http://mac.local:8787',async(url,options)=>{calls.push({url:new URL(url),options});return new Response(JSON.stringify(calls.length===1?{events:[fixture('occurrence-1')],hasMore:true}:{events:[fixture('occurrence-2')],hasMore:false}));});
 assert.equal((await api.events('2026-10-15','2026-10-22')).length,2);
 assert.equal(calls[1].url.searchParams.get('offset'),'1');
 assert.equal(calls[0].options.method,'GET');
@@ -16,4 +22,8 @@ await assert.rejects(broken.status(),error=>error.code==='rate_limited'&&error.r
 assert.equal(retryDelay('1'),30000);
 assert.equal(retryDelay('Thu, 15 Oct 2026 12:01:00 GMT',Date.parse('2026-10-15T12:00:00Z')),60000);
 assert.throws(()=>createGateway('http://user:secret@mac.local'));
+const invalid=createGateway('http://mac.local:8787',async()=>new Response(JSON.stringify({events:[{id:'missing-fields'}],hasMore:false})));
+await assert.rejects(invalid.events('2026-10-15','2026-10-22'),error=>error.code==='invalid_response');
+const unavailable=createGateway('http://mac.local:8787',async()=>new Response(JSON.stringify({available:false,busy:false,unavailableReason:'calendar_access_denied'})));
+assert.deepEqual(await unavailable.status(),{available:false,busy:false,unavailableReason:'calendar_access_denied'});
 console.log('CalendarGateway checks passed: GET-only, pagination, exclusive all-day dates, time zones, rate limiting, credential rejection.');

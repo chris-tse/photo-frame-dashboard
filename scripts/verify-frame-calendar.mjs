@@ -9,6 +9,7 @@ ws.onmessage=message=>{const data=JSON.parse(message.data);if(data.id&&pending.h
 async function evaluate(expression){const id=++sequence;const response=new Promise(resolve=>pending.set(id,resolve));ws.send(JSON.stringify({id,method:'Runtime.evaluate',params:{expression,awaitPromise:true,returnByValue:true}}));const data=await response;if(data.result.exceptionDetails)throw new Error('Calendar verification expression failed');return data.result.result.value;}
 try{
 const result=await evaluate(`(async()=>{
+ for(let attempt=0;attempt<100&&!document.querySelector('[data-view=calendar]');attempt++)await new Promise(r=>setTimeout(r,100));
  document.querySelector('[data-view=calendar]').click();
  await new Promise(r=>setTimeout(r,1800));
  const checks=[];

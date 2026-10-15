@@ -1,13 +1,38 @@
-import React, { useEffect, useRef, useState } from "react";
+import type { CSSProperties, Dispatch, ReactNode, SetStateAction } from "react";
+import type {
+  CalendarMode,
+  View,
+  Household,
+  HouseholdEvent,
+  ShoppingItem,
+  WorkEvent,
+} from "./models.ts";
+import { isView, parseHousehold } from "./models.ts";
+type Update = Dispatch<SetStateAction<Household>>;
+type Notify = (message: string) => void;
+type OpenWork = (events: WorkEvent[], title: string) => void;
+type AppDialog =
+  | { kind: "event"; event: HouseholdEvent }
+  | { kind: "connection" }
+  | { kind: "work"; events: WorkEvent[]; title: string };
+const personStyle = (
+  color: string,
+): CSSProperties & { "--person": string } => ({ "--person": color });
+function formText(form: FormData, name: string): string {
+  const value = form.get(name);
+  if (typeof value !== "string") throw new Error("Missing form field: " + name);
+  return value;
+}
+import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
-import { createGateway, eventOnDay } from "./calendar-gateway.js";
-import { TIME_ZONE, people, person, seed, todayKey, shiftDay } from "./data.js";
-import { calendarRange } from "./calendar-range.js";
-import { useCalendar } from "./use-calendar.js";
+import { createGateway, eventOnDay } from "./calendar-gateway.ts";
+import { TIME_ZONE, people, person, seed, todayKey, shiftDay } from "./data.ts";
+import { calendarRange } from "./calendar-range.ts";
+import { useCalendar } from "./use-calendar.ts";
 
 const storageKey = "komorebi-household-v2";
-const views = ["home", "shopping", "tasks", "calendar"];
+const views: View[] = ["home", "shopping", "tasks", "calendar"];
 const categories = [
   "Produce",
   "Bakery",
@@ -17,18 +42,23 @@ const categories = [
   "Home",
   "Other",
 ];
+const calendarModes: CalendarMode[] = ["day", "week", "month"];
 const routines = ["Morning", "Afternoon", "Evening"];
 const uid = () =>
   Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const dayLabel = (
-  day,
-  options = { weekday: "long", month: "long", day: "numeric" },
+  day: string,
+  options: Intl.DateTimeFormatOptions = {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  },
 ) => new Date(day + "T12:00:00").toLocaleDateString("en-US", options);
-const timeLabel = (value) => {
+const timeLabel = (value: string) => {
   const [h, m] = value.split(":");
   return `${Number(h) % 12 || 12}:${m}${Number(h) < 12 ? " am" : " pm"}`;
 };
-const workTime = (event) =>
+const workTime = (event: WorkEvent) =>
   event.isAllDay
     ? "All day"
     : new Date(event.start).toLocaleTimeString("en-US", {
@@ -36,20 +66,16 @@ const workTime = (event) =>
         hour: "numeric",
         minute: "2-digit",
       });
-function readHousehold() {
+function readHousehold(): Household {
   try {
-    const saved = JSON.parse(localStorage.getItem(storageKey));
-    if (
-      saved?.version === 2 &&
-      Array.isArray(saved.shopping) &&
-      Array.isArray(saved.tasks) &&
-      Array.isArray(saved.events)
-    )
-      return saved;
-  } catch {}
-  return seed();
+    return parseHousehold(
+      JSON.parse(localStorage.getItem(storageKey) || "null"),
+    );
+  } catch {
+    return seed();
+  }
 }
-function Options({ values }) {
+function Options({ values }: { values: string[] }) {
   return values.map((value) => (
     <option key={value} value={value}>
       {value}
@@ -68,7 +94,7 @@ function PeopleOptions({ all = true }) {
     </>
   );
 }
-function Checkbox({ checked }) {
+function Checkbox({ checked = false }: { checked?: boolean }) {
   return (
     <span
       className={"checkbox" + (checked ? " checked" : "")}
@@ -76,10 +102,20 @@ function Checkbox({ checked }) {
     />
   );
 }
-function Dialog({ id, title, close, children }) {
-  const ref = useRef(null);
+function Dialog({
+  id,
+  title,
+  close,
+  children,
+}: {
+  id: string;
+  title: string;
+  close: () => void;
+  children: ReactNode;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
-    ref.current.showModal();
+    ref.current?.showModal();
   }, []);
   return (
     <dialog id={id} ref={ref} onCancel={close}>
@@ -93,7 +129,19 @@ function Dialog({ id, title, close, children }) {
     </dialog>
   );
 }
-function Home({ state, update, navigate, openEvent, showPerson }) {
+function Home({
+  state,
+  update,
+  navigate,
+  openEvent,
+  showPerson,
+}: {
+  state: Household;
+  update: Update;
+  navigate: (view: View) => void;
+  openEvent: (event: HouseholdEvent) => void;
+  showPerson: (id: string) => void;
+}) {
   const [now, setNow] = useState(() => new Date());
   const [saved, setSaved] = useState(false);
   useEffect(() => {
@@ -106,7 +154,8 @@ function Home({ state, update, navigate, openEvent, showPerson }) {
     minute: "2-digit",
     hour12: true,
   }).formatToParts(now);
-  const part = (type) => parts.find((p) => p.type === type).value;
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === type)?.value ?? "";
   const minutes =
     ((Number(part("hour")) % 12) + (part("dayPeriod") === "PM" ? 12 : 0)) * 60 +
     Number(part("minute"));
@@ -153,7 +202,7 @@ function Home({ state, update, navigate, openEvent, showPerson }) {
               data-family={p.id}
               onClick={() => showPerson(p.id)}
             >
-              <span className="avatar" style={{ "--person": p.color }}>
+              <span className="avatar" style={personStyle(p.color)}>
                 {p.name[0]}
               </span>
               <span>
@@ -222,7 +271,7 @@ function Home({ state, update, navigate, openEvent, showPerson }) {
                 >
                   <span
                     className="person-dot"
-                    style={{ "--person": person(e.person).color }}
+                    style={personStyle(person(e.person).color)}
                     aria-hidden="true"
                   />
                   <time>{timeLabel(e.start)}</time>
@@ -271,21 +320,29 @@ function Home({ state, update, navigate, openEvent, showPerson }) {
     </div>
   );
 }
-function Shopping({ state, update, notify }) {
+function Shopping({
+  state,
+  update,
+  notify,
+}: {
+  state: Household;
+  update: Update;
+  notify: Notify;
+}) {
   const [store, setStore] = useState("All");
   const items = state.shopping.filter(
       (i) => store === "All" || i.store === store,
     ),
     open = items.filter((i) => !i.done),
     checked = items.filter((i) => i.done);
-  function change(id, fn) {
+  function change(id: string, fn: (item: ShoppingItem) => ShoppingItem) {
     update((s) => ({
       ...s,
       shopping: s.shopping.map((i) => (i.id === id ? fn(i) : i)),
     }));
   }
   function add(
-    name,
+    name: string,
     category = "Other",
     targetStore = store === "All" ? "Market" : store,
   ) {
@@ -427,7 +484,11 @@ function Shopping({ state, update, notify }) {
               onSubmit={(e) => {
                 e.preventDefault();
                 const form = new FormData(e.currentTarget);
-                add(form.get("name"), form.get("category"), form.get("store"));
+                add(
+                  formText(form, "name"),
+                  formText(form, "category"),
+                  formText(form, "store"),
+                );
                 e.currentTarget.reset();
               }}
             >
@@ -486,7 +547,19 @@ function Shopping({ state, update, notify }) {
     </section>
   );
 }
-function Tasks({ state, update, notify, taskPerson, setTaskPerson }) {
+function Tasks({
+  state,
+  update,
+  notify,
+  taskPerson,
+  setTaskPerson,
+}: {
+  state: Household;
+  update: Update;
+  notify: Notify;
+  taskPerson: string;
+  setTaskPerson: (id: string) => void;
+}) {
   const [routine, setRoutine] = useState("All");
   const filtered = state.tasks.filter(
     (t) =>
@@ -535,7 +608,7 @@ function Tasks({ state, update, notify, taskPerson, setTaskPerson }) {
               <section
                 key={p.id}
                 className="task-board"
-                style={{ "--person": p.color }}
+                style={personStyle(p.color)}
               >
                 <div className="person-heading">
                   <span className="avatar">{p.name[0]}</span>
@@ -597,7 +670,7 @@ function Tasks({ state, update, notify, taskPerson, setTaskPerson }) {
         onSubmit={(e) => {
           e.preventDefault();
           const form = new FormData(e.currentTarget),
-            title = form.get("title").trim();
+            title = formText(form, "title").trim();
           if (!title) return;
           update((s) => ({
             ...s,
@@ -606,8 +679,8 @@ function Tasks({ state, update, notify, taskPerson, setTaskPerson }) {
               {
                 id: uid(),
                 title,
-                person: form.get("person"),
-                routine: form.get("routine"),
+                person: formText(form, "person"),
+                routine: formText(form, "routine"),
                 done: false,
               },
             ],
@@ -653,12 +726,12 @@ function Tasks({ state, update, notify, taskPerson, setTaskPerson }) {
     </section>
   );
 }
-function WorkCard({ event, open }) {
+function WorkCard({ event, open }: { event: WorkEvent; open: OpenWork }) {
   return (
     <button
       className="event-card compact"
       data-work-event={event.id}
-      style={{ "--person": "var(--accent)" }}
+      style={personStyle("var(--accent)")}
       onClick={() => open([event], "Meeting details")}
     >
       <span className="event-time">{workTime(event)}</span>
@@ -675,9 +748,18 @@ function Calendar({
   setMode,
   connect,
   open,
+}: {
+  base: string;
+  calendar: ReturnType<typeof useCalendar>;
+  date: string;
+  setDate: (date: string) => void;
+  mode: CalendarMode;
+  setMode: (mode: CalendarMode) => void;
+  connect: () => void;
+  open: OpenWork;
 }) {
   const [from] = calendarRange(date, mode);
-  const eventsOn = (day) =>
+  const eventsOn = (day: string) =>
     calendar.events.filter((event) => eventOnDay(event, day, TIME_ZONE));
   const ready = calendar.status?.available && !calendar.error;
   const status = calendar.error
@@ -699,11 +781,11 @@ function Calendar({
           " – " +
           dayLabel(shiftDay(from, 6), { month: "short", day: "numeric" })
         : dayLabel(date);
-  function selectDay(day) {
+  function selectDay(day: string) {
     setDate(day);
     setMode("day");
   }
-  function step(direction) {
+  function step(direction: number) {
     if (mode !== "month")
       return setDate(shiftDay(date, direction * (mode === "week" ? 7 : 1)));
     const value = new Date(date.slice(0, 7) + "-01T12:00:00");
@@ -712,7 +794,7 @@ function Calendar({
       `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-01`,
     );
   }
-  function dayEvents(day, limit) {
+  function dayEvents(day: string, limit: number) {
     const events = eventsOn(day);
     return (
       <>
@@ -772,14 +854,14 @@ function Calendar({
           </button>
         </div>
         <div className="routine-tabs" aria-label="Calendar view">
-          {["day", "week", "month"].map((m) => (
+          {calendarModes.map((m) => (
             <button
               key={m}
               data-calendar-mode={m}
               aria-pressed={m === mode}
               onClick={() => setMode(m)}
             >
-              {m[0].toUpperCase() + m.slice(1)}
+              {m.charAt(0).toUpperCase() + m.slice(1)}
             </button>
           ))}
         </div>
@@ -789,7 +871,9 @@ function Calendar({
           {calendar.error ||
             (!base
               ? "Connect your Mac to see your work calendar."
-              : calendar.status?.unavailableReason || "Loading work calendar…")}
+              : (calendar.status?.available === false
+                  ? calendar.status.unavailableReason
+                  : "") || "Loading work calendar…")}
         </p>
       )}
       <div className="calendar-content" data-mode={mode}>
@@ -878,7 +962,17 @@ function Calendar({
     </section>
   );
 }
-function EventEditor({ event, close, update, notify }) {
+function EventEditor({
+  event,
+  close,
+  update,
+  notify,
+}: {
+  event: HouseholdEvent;
+  close: () => void;
+  update: Update;
+  notify: Notify;
+}) {
   const [error, setError] = useState("");
   return (
     <Dialog id="event-dialog" title="Edit event" close={close}>
@@ -886,8 +980,16 @@ function EventEditor({ event, close, update, notify }) {
         id="event-form"
         onSubmit={(e) => {
           e.preventDefault();
-          const value = Object.fromEntries(new FormData(e.currentTarget));
-          value.title = value.title.trim();
+          const form = new FormData(e.currentTarget);
+          const value: HouseholdEvent = {
+            id: event.id,
+            title: formText(form, "title").trim(),
+            date: formText(form, "date"),
+            start: formText(form, "start"),
+            end: formText(form, "end"),
+            person: formText(form, "person"),
+            location: formText(form, "location"),
+          };
           if (value.end <= value.start)
             return setError("Choose an end time after the start.");
           if (!value.title) return;
@@ -969,7 +1071,15 @@ function EventEditor({ event, close, update, notify }) {
     </Dialog>
   );
 }
-function Connection({ base, save, close }) {
+function Connection({
+  base,
+  save,
+  close,
+}: {
+  base: string;
+  save: (value: string) => void;
+  close: () => void;
+}) {
   const [error, setError] = useState("");
   return (
     <Dialog id="gateway-dialog" title="Calendar connection" close={close}>
@@ -977,13 +1087,17 @@ function Connection({ base, save, close }) {
         id="gateway-form"
         onSubmit={(e) => {
           e.preventDefault();
-          const value = new FormData(e.currentTarget).get("url").trim();
+          const value = formText(new FormData(e.currentTarget), "url").trim();
           try {
             if (value) createGateway(value);
             save(value);
             close();
           } catch (error) {
-            setError(error.message);
+            setError(
+              error instanceof Error
+                ? error.message
+                : "Invalid calendar connection.",
+            );
           }
         }}
       >
@@ -1015,16 +1129,17 @@ function Connection({ base, save, close }) {
 }
 function App() {
   const [state, setState] = useState(readHousehold);
-  const [view, setView] = useState(() =>
-    views.includes(location.hash.slice(1)) ? location.hash.slice(1) : "home",
-  );
+  const [view, setView] = useState<View>(() => {
+    const value = location.hash.slice(1);
+    return isView(value) ? value : "home";
+  });
   const [base, setBase] = useState(
     () => localStorage.getItem("komorebi-calendar-url") || "",
   );
   const [date, setDate] = useState(todayKey),
-    [mode, setMode] = useState("week");
+    [mode, setMode] = useState<CalendarMode>("week");
   const [taskPerson, setTaskPerson] = useState("all");
-  const [dialog, setDialog] = useState(null),
+  const [dialog, setDialog] = useState<AppDialog | null>(null),
     [toast, setToast] = useState("");
   const [from, to] = calendarRange(date, mode);
   const calendar = useCalendar(base, from, to);
@@ -1046,16 +1161,16 @@ function App() {
   useEffect(() => {
     const change = () => {
       const value = location.hash.slice(1);
-      if (views.includes(value)) setView(value);
+      if (isView(value)) setView(value);
     };
     window.addEventListener("hashchange", change);
     return () => window.removeEventListener("hashchange", change);
   }, []);
-  function navigate(value) {
+  function navigate(value: View) {
     history.replaceState(null, "", "#" + value);
     setView(value);
   }
-  function open(events, title) {
+  function open(events: WorkEvent[], title: string) {
     setDialog({ kind: "work", events, title });
   }
   return (
@@ -1072,7 +1187,7 @@ function App() {
               aria-current={view === value ? "page" : "false"}
               onClick={() => navigate(value)}
             >
-              {value[0].toUpperCase() + value.slice(1)}
+              {value.charAt(0).toUpperCase() + value.slice(1)}
             </button>
           ))}
         </nav>
@@ -1180,4 +1295,6 @@ function App() {
     </>
   );
 }
-createRoot(document.getElementById("root")).render(<App />);
+const root = document.getElementById("root");
+if (!root) throw new Error("Missing dashboard root.");
+createRoot(root).render(<App />);

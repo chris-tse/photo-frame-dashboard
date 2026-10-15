@@ -1,15 +1,16 @@
+import type { GatewayStatus, WorkEvent } from "./models.ts";
 import { useEffect, useState } from "react";
-import { createGateway } from "./calendar-gateway.js";
+import { createGateway, gatewayFailure } from "./calendar-gateway.ts";
 
 // Status polling is independent of date navigation, which only fetches events.
-export function useCalendar(base, from, to) {
-  const [status, setStatus] = useState(null);
+export function useCalendar(base: string, from: string, to: string) {
+  const [status, setStatus] = useState<GatewayStatus | null>(null);
   const [statusError, setStatusError] = useState("");
-  const [events, setEvents] = useState([]);
+  const [events, setEvents] = useState<WorkEvent[]>([]);
   const [eventsError, setEventsError] = useState("");
   useEffect(() => {
     let canceled = false,
-      timer,
+      timer: ReturnType<typeof setTimeout> | undefined,
       failures = 0;
     setStatus(null);
     setStatusError("");
@@ -22,7 +23,8 @@ export function useCalendar(base, from, to) {
         setStatus(result);
         setStatusError("");
         failures = 0;
-      } catch (error) {
+      } catch (caught) {
+        const error = gatewayFailure(caught);
         if (canceled) return;
         setStatusError(error.message);
         delay = Math.max(
@@ -40,7 +42,7 @@ export function useCalendar(base, from, to) {
   }, [base]);
   useEffect(() => {
     let canceled = false,
-      timer,
+      timer: ReturnType<typeof setTimeout> | undefined,
       failures = 0;
     setEvents([]);
     setEventsError("");
@@ -54,7 +56,8 @@ export function useCalendar(base, from, to) {
           failures = 0;
           timer = setTimeout(load, 30000);
         }
-      } catch (error) {
+      } catch (caught) {
+        const error = gatewayFailure(caught);
         if (canceled) return;
         setEventsError(error.message);
         timer = setTimeout(

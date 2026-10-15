@@ -1,6 +1,6 @@
 # Komorebi dashboard
 
-An independent household dashboard with Home, Shopping, Tasks and Calendar screens. Built with React and Vite. Written from scratch; the repository demo informed the kinds of interactions only. The original dashboard is unchanged.
+An independent household dashboard with Home, Shopping, Tasks and Calendar screens. Built with React, TypeScript and Vite. Written from scratch; the repository demo informed the kinds of interactions only. The original dashboard is unchanged.
 
 Shopping, tasks, household events, theme and notes are saved in this browser's local storage. Household data starts with fictional examples. Work-calendar events are read-only and kept in memory, separate from editable household plans.
 
@@ -46,6 +46,8 @@ Vite targets Chrome 106 for the frame's WebView. Browser verification uses isola
 Coastal Enoden train photograph by [Sunil Poudel on Pexels](https://www.pexels.com/photo/train-in-move-near-sea-9496189/), used under the [Pexels license](https://www.pexels.com/license/). The downloaded asset is served locally. No generated illustration assets are used.
 
 ## Development and upstream updates
+
+Run `npm --prefix anime-dashboard run typecheck` for strict TypeScript checking. Production builds run this check automatically. Verification scripts that import TypeScript require Node.js 22.18 or newer.
 
 Run `npm --prefix anime-dashboard run dev` for React Fast Refresh. The development server serves the UI; use the existing dashboard server’s absolute `/calendar` URL for calendar requests. Build before reloading the frame. The browser storage keys are preserved across the React migration.
 
