@@ -20,6 +20,27 @@ The script reports the LAN URL. It serves only `anime-dashboard/dist` through a 
 ./scripts/stop-anime-dashboard.sh
 ```
 
+## Update the frame
+
+The frame loads the dashboard from the Linux server; files are not copied to Android. Run these commands from the repository root after editing:
+
+```sh
+npm --prefix anime-dashboard run build
+./scripts/start-anime-dashboard.sh
+```
+
+Reload the frame to load the new build. With its USB data cable connected and ADB authorized, restart Home HQ:
+
+```sh
+adb devices -l
+adb -d shell am force-stop com.wesbos.homehq
+adb -d shell am start -n com.wesbos.homehq/.MainActivity
+```
+
+Use an installed `adb`, or the local binary at `diagnostics/pastigio-frame157/tools/adb` if available. Home HQ retains its startup URL, currently `http://192.168.1.119:5180/`. Keep the host on that address and port to preserve the existing frame URL and firewall rule. A Git push alone does not update the running dashboard.
+
+For temporary WebView inspection, start the activity with `--ez debug true`. After inspection, start it again without that extra to disable debugging, and remove any ADB port forwards you created. Keep corporate calendar details out of screenshots and logs.
+
 ## CalendarGateway
 
 Open Calendar, then Connection settings. Use the dashboard server’s `/calendar` URL for the authenticated SSH route below. Direct browser connections require CalendarGateway to allow the dashboard origin and cannot use a private bearer token.
