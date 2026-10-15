@@ -40,7 +40,7 @@ try{
  assert.equal(await evaluate("document.querySelectorAll('[data-add-event]').length"),0);
  await click('[data-calendar-mode="month"]');assert.equal(await evaluate("document.querySelectorAll('.month-day').length"),42);
  await click('[data-calendar-mode="day"]');assert(await evaluate("!!document.querySelector('.work-day-grid')"));
- await click('[data-calendar-mode="week"]');const originalHeading=await evaluate("document.querySelector('.calendar-date-nav h2').textContent");await click('[data-calendar-step="1"]');assert.notEqual(await evaluate("document.querySelector('.calendar-date-nav h2').textContent"),originalHeading);await click('[data-calendar-today]');
+ await click('[data-calendar-mode="week"]');assert.deepEqual(await evaluate("[...document.querySelectorAll('.day-heading span')].map(node=>node.textContent)"),['Sun','Mon','Tue','Wed','Thu','Fri','Sat']);const originalHeading=await evaluate("document.querySelector('.calendar-date-nav h2').textContent");await click('[data-calendar-step="1"]');assert.notEqual(await evaluate("document.querySelector('.calendar-date-nav h2').textContent"),originalHeading);await click('[data-calendar-today]');
  await click('#theme');assert(await evaluate("document.body.classList.contains('evening')"));await send('Page.reload');await loaded();saved=await read();assert(saved.shopping.some(i=>i.id===item.id)&&saved.tasks.some(t=>t.id===task.id&&t.done));
  await click('[data-view="tasks"]');await click(`[data-task-delete="${task.id}"]`);assert(!(await read()).tasks.some(t=>t.id===task.id));
  await click('[data-view="home"]');await evaluate("document.getElementById('home-note').focus()");await send('Input.insertText',{text:'A shared little note.'});assert.equal((await read()).note,'A shared little note.');
