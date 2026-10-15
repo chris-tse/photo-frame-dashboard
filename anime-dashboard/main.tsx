@@ -764,17 +764,6 @@ function Calendar({
   const eventsOn = (day: string) =>
     calendar.events.filter((event) => eventOnDay(event, day, TIME_ZONE));
   const ready = calendar.status?.available && !calendar.error;
-  const status = calendar.error
-    ? "Unavailable"
-    : !base
-      ? "Not connected"
-      : !calendar.status
-        ? "Connecting"
-        : !calendar.status.available
-          ? "Unavailable"
-          : calendar.status.busy
-            ? "In a meeting"
-            : "Available";
   const heading =
     mode === "month"
       ? dayLabel(date, { month: "long", year: "numeric" })
@@ -819,17 +808,6 @@ function Calendar({
   const events = eventsOn(date);
   return (
     <section className="screen calendar-screen">
-      <header className="screen-heading">
-        <div>
-          <h1>Work calendar</h1>
-          <p>
-            {status} · Read only · {TIME_ZONE}
-          </p>
-        </div>
-        <button className="text-button" id="work-connect" onClick={connect}>
-          {base ? "Connection settings" : "Connect Mac"}
-        </button>
-      </header>
       <div className="calendar-toolbar">
         <div className="calendar-date-nav">
           <button
@@ -855,6 +833,9 @@ function Calendar({
             Today
           </button>
         </div>
+        <button className="text-button" id="work-connect" onClick={connect}>
+          {base ? "Connection settings" : "Connect Mac"}
+        </button>
         <div className="routine-tabs" aria-label="Calendar view">
           {calendarModes.map((m) => (
             <button
