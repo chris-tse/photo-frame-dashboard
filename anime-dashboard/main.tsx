@@ -1,3 +1,4 @@
+import { House, ShoppingBasket, ListChecks, CalendarDays, Sun, Moon } from "lucide-react";
 import type { CSSProperties, Dispatch, ReactNode, SetStateAction } from "react";
 import type {
   CalendarMode,
@@ -32,6 +33,7 @@ import { calendarRange } from "./calendar-range.ts";
 import { useCalendar } from "./use-calendar.ts";
 
 const storageKey = "komorebi-household-v2";
+const navigationIcons = { home: House, shopping: ShoppingBasket, tasks: ListChecks, calendar: CalendarDays };
 const views: View[] = ["home", "shopping", "tasks", "calendar"];
 const categories = [
   "Produce",
@@ -1175,33 +1177,31 @@ function App() {
   }
   return (
     <>
-      <header className="topbar">
-        <a className="brand" href="#home">
-          Home
-        </a>
+      <aside className="sidebar">
         <nav aria-label="Dashboard screens">
-          {views.map((value) => (
+          {views.map((value) => { const Icon = navigationIcons[value]; return (
             <button
               key={value}
               data-view={value}
               aria-current={view === value ? "page" : "false"}
               onClick={() => navigate(value)}
             >
-              {value.charAt(0).toUpperCase() + value.slice(1)}
+              <Icon size={26} strokeWidth={1.8} aria-hidden="true" />
+              <span>{value.charAt(0).toUpperCase() + value.slice(1)}</span>
             </button>
-          ))}
+          ); })}
         </nav>
-        <div className="header-end">
-          <span className="demo-label">Demo household</span>
+        <div className="sidebar-footer">
           <button
             id="theme"
             aria-pressed={state.evening}
             onClick={() => setState((s) => ({ ...s, evening: !s.evening }))}
           >
-            {state.evening ? "Light mode" : "Dark mode"}
+            {state.evening ? <Sun size={24} aria-hidden="true" /> : <Moon size={24} aria-hidden="true" />}
+            <span>{state.evening ? "Light mode" : "Dark mode"}</span>
           </button>
         </div>
-      </header>
+      </aside>
       <main id="content">
         {view === "home" && (
           <Home
