@@ -33,7 +33,7 @@ export function seed(): Household {
   const today = todayKey();
   return {
     version: 2,
-    evening: false,
+
     note: "",
     shopping: [
       {

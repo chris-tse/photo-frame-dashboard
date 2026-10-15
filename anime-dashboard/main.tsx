@@ -1,4 +1,4 @@
-import { House, ShoppingBasket, ListChecks, CalendarDays, Sun, Moon } from "lucide-react";
+import { House, ShoppingBasket, ListChecks, CalendarDays, RotateCw } from "lucide-react";
 import type { CSSProperties, Dispatch, ReactNode, SetStateAction } from "react";
 import type {
   CalendarMode,
@@ -1134,9 +1134,6 @@ function App() {
     }
   }, [state]);
   useEffect(() => {
-    document.body.classList.toggle("evening", state.evening);
-  }, [state.evening]);
-  useEffect(() => {
     if (!toast) return;
     const timer = setTimeout(() => setToast(""), 3000);
     return () => clearTimeout(timer);
@@ -1173,13 +1170,8 @@ function App() {
           ); })}
         </nav>
         <div className="sidebar-footer">
-          <button
-            id="theme"
-            aria-pressed={state.evening}
-            onClick={() => setState((s) => ({ ...s, evening: !s.evening }))}
-          >
-            {state.evening ? <Sun size={24} aria-hidden="true" /> : <Moon size={24} aria-hidden="true" />}
-            <span>{state.evening ? "Light mode" : "Dark mode"}</span>
+          <button id="refresh" aria-label="Refresh dashboard" title="Refresh dashboard" onClick={() => location.reload()}>
+            <RotateCw size={24} aria-hidden="true" />
           </button>
         </div>
       </aside>

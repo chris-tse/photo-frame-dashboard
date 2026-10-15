@@ -2,7 +2,7 @@
 
 An independent household dashboard with Home, Shopping, Tasks and Calendar screens. Built with React, TypeScript and Vite. Written from scratch; the repository demo informed the kinds of interactions only. The original dashboard is unchanged.
 
-Shopping, tasks, household events, theme and notes are saved in this browser's local storage. Household data starts with fictional examples. Work-calendar events are read-only and kept in memory, separate from editable household plans.
+Shopping, tasks, household events and notes are saved in this browser's local storage. Household data starts with fictional examples. Work-calendar events are read-only and kept in memory, separate from editable household plans.
 
 ## Run locally
 
@@ -29,7 +29,7 @@ npm --prefix anime-dashboard run build
 ./scripts/start-anime-dashboard.sh
 ```
 
-Reload the frame to load the new build. With its USB data cable connected and ADB authorized, restart Home HQ:
+Tap the refresh icon at the bottom of the sidebar to load the new build. With its USB data cable connected and ADB authorized, restart Home HQ:
 
 ```sh
 adb devices -l

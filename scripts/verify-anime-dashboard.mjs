@@ -41,10 +41,9 @@ try{
  await click('[data-calendar-mode="month"]');assert.equal(await evaluate("document.querySelectorAll('.month-day').length"),42);
  await click('[data-calendar-mode="day"]');assert(await evaluate("!!document.querySelector('.work-day-grid')"));
  await click('[data-calendar-mode="week"]');assert.deepEqual(await evaluate("[...document.querySelectorAll('.day-heading span')].map(node=>node.textContent)"),['Sun','Mon','Tue','Wed','Thu','Fri','Sat']);const originalHeading=await evaluate("document.querySelector('.calendar-date-nav h2').textContent");await click('[data-calendar-step="1"]');assert.notEqual(await evaluate("document.querySelector('.calendar-date-nav h2').textContent"),originalHeading);await click('[data-calendar-today]');
- await click('#theme');assert(await evaluate("document.body.classList.contains('evening')"));await send('Page.reload');await loaded();saved=await read();assert(saved.shopping.some(i=>i.id===item.id)&&saved.tasks.some(t=>t.id===task.id&&t.done));
+ await evaluate('window.__beforeRefresh=true');await click('#refresh');await sleep(200);await loaded();assert.equal(await evaluate('window.__beforeRefresh'),undefined);saved=await read();assert(saved.shopping.some(i=>i.id===item.id)&&saved.tasks.some(t=>t.id===task.id&&t.done));
  await click('[data-view="tasks"]');await click(`[data-task-delete="${task.id}"]`);assert(!(await read()).tasks.some(t=>t.id===task.id));
  await click('[data-view="home"]');await evaluate("document.getElementById('home-note').focus()");await send('Input.insertText',{text:'A shared little note.'});assert.equal((await read()).note,'A shared little note.');
- await click('#theme');
  await sleep(100);writeFileSync(join(output,'desktop.png'),Buffer.from((await send('Page.captureScreenshot',{format:'png'})).data,'base64'));
  for(const name of ['shopping','tasks','calendar']){await click(`[data-view="${name}"]`);assert(await evaluate('document.documentElement.scrollWidth<=innerWidth'));writeFileSync(join(output,name+'.png'),Buffer.from((await send('Page.captureScreenshot',{format:'png'})).data,'base64'));}
  await send('Emulation.setDeviceMetricsOverride',{width:1808,height:1017,deviceScaleFactor:1,mobile:false});
@@ -53,6 +52,6 @@ try{
  await click('[data-calendar-mode="week"]');writeFileSync(join(output,'frame-sidebar.png'),Buffer.from((await send('Page.captureScreenshot',{format:'png'})).data,'base64'));
  await click('[data-view="home"]');await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});assert(await evaluate('document.documentElement.scrollWidth<=innerWidth'));
  writeFileSync(join(output,'mobile.png'),Buffer.from((await send('Page.captureScreenshot',{format:'png'})).data,'base64'));
- assert.deepEqual(errors,[]);writeFileSync(join(output,'verification.json'),JSON.stringify({layout,checks:['four-screen navigation','shopping add/quantity/check/restore','task add/complete/filter/delete','read-only work calendar/day/week/month/date navigation','note persistence','theme persistence','data persistence after reload','1920x1080 layout','390px horizontal fit','no uncaught exceptions'],errors},null,2));
+ assert.deepEqual(errors,[]);writeFileSync(join(output,'verification.json'),JSON.stringify({layout,checks:['four-screen navigation','shopping add/quantity/check/restore','task add/complete/filter/delete','read-only work calendar/day/week/month/date navigation','note persistence','sidebar refresh button','data persistence after reload','1920x1080 layout','390px horizontal fit','no uncaught exceptions'],errors},null,2));
  console.log('PASS: four screens, shopping, tasks, read-only work calendar, persistence and responsive layout');
 }finally{try{await send('Browser.close',{},null);}catch{}socket.close();processChrome.kill();await sleep(300);rmSync(profile,{recursive:true,force:true});}

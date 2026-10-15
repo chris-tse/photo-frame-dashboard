@@ -26,7 +26,7 @@ export interface HouseholdEvent {
 }
 export interface Household {
   version: 2;
-  evening: boolean;
+
   note: string;
   shopping: ShoppingItem[];
   tasks: Task[];
@@ -70,7 +70,7 @@ export function parseHousehold(value: unknown): Household {
   if (source.version !== 2) throw new Error("Unsupported household version.");
   return {
     version: 2,
-    evening: boolean(source.evening),
+
     note: string(source.note),
     shopping: array(source.shopping, (value) => {
       const item = record(value);
